@@ -45,7 +45,7 @@
 // Windows already has builtins to do this.
 #![cfg(not(windows))]
 // We only define stack probing for these architectures today.
-#![cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+#![cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "aarch64"))]
 
 extern "C" {
     pub fn __rust_probestack();
@@ -187,3 +187,58 @@ global_asm!(define_rust_probestack!(
     .cfi_endproc
     "
 ));
+
+#[cfg(target_arch = "aarch64")]
+global_asm!(define_rust_probestack!(
+    "
+    .cfi_startproc
+    sub    sp, sp, #16
+    .cfi_adjust_cfa_offset 16
+    str    x29, [sp, #8]
+    .cfi_offset x29, -8
+    mov    x29, sp
+    .cfi_def_cfa_register x29
+
+    mov    x9, x0
+
+    cmp    x9, #0x1000
+    b.ls   3f
+2:
+    sub    sp, sp, #0x1000
+    ldrh   w9, [sp, #16]
+    sub    x9, x9, #0x1000
+    cmp    x9, #0x1000
+    b.hi   2b
+
+3:
+    sub    sp, sp, x9
+    ldrh   w8, [sp, #16]
+
+    add    sp, sp, x0
+
+    .cfi_def_cfa_register sp
+    ldr    x29, [sp, #8]
+    .cfi_restore x29
+    add    sp, sp, #16
+    .cfi_adjust_cfa_offset -16
+
+    ret
+    .cfi_endproc
+    "
+));
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_probestack() {
+        let x = 5u32;
+        let y = 42u32;
+        unsafe {
+            asm!("
+                mov   x0, #0x4000000
+            " ::: "memory" : "volatile");
+            __rust_probestack();
+        }
+    }
+}

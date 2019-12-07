@@ -24,7 +24,7 @@ include = [
 links = 'compiler-rt'
 
 [lib]
-test = false
+#test = false
 
 [dependencies]
 # For more information on this dependency see rust-lang/rust's

@@ -27,8 +27,8 @@
 // that follow "x86 naming convention" (e.g. addsf3). Those aeabi intrinsics must adhere to the
 // AAPCS calling convention (`extern "aapcs"`) because that's how LLVM will call them.
 
-#[cfg(test)]
-extern crate core;
+//#[cfg(test)]
+//extern crate core;
 
 fn abort() -> ! {
     unsafe { core::intrinsics::abort() }
